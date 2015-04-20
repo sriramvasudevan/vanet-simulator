@@ -1,0 +1,21 @@
+Episode 0
+-----------
+0, 1, 2, 3, 4, 5, 6, 7, 8, 9, selected
+Packets received:1074, generated:154745, dropped:153170, remaining:209. PDR = 0.0069404505, V2I pkt delay = 5.800745, OPEX = 26909.53500000272, Total Energy = 905370.0
+Longest queue: 7, Max No. of Cars: 432, No. of RSUs: 10
+Episode 1
+-----------
+0, 1, 2, 3, 4, 5, 6, 7, 8, 9, selected
+Packets received:1059, generated:151815, dropped:150252, remaining:215. PDR = 0.0069755954, V2I pkt delay = 5.862134, OPEX = 26924.800000002746, Total Energy = 905290.0
+Longest queue: 7, Max No. of Cars: 466, No. of RSUs: 10
+Episode 2
+-----------
+0, 1, 2, 3, 4, 5, 6, 7, 8, 9, selected
+Packets received:1072, generated:159534, dropped:157958, remaining:216. PDR = 0.0067195706, V2I pkt delay = 5.8274255, OPEX = 26987.895000002776, Total Energy = 905355.0
+Longest queue: 7, Max No. of Cars: 463, No. of RSUs: 10
+Episode 3
+-----------
+0, 1, 2, 3, 4, 5, 6, 7, 8, 9, selected
+Packets received:1074, generated:157118, dropped:155547, remaining:214. PDR = 0.006835627, V2I pkt delay = 5.821229, OPEX = 26844.84000000272, Total Energy = 905370.0
+Longest queue: 8, Max No. of Cars: 456, No. of RSUs: 10
+Simulation completed. Avg. PDR = 0.0068678107978890025, Avg. V2I pkt delay = 5.8278833477834535, Avg. OPEX = 26916.76750000274, Avg. Total Energy = 0905346.25
