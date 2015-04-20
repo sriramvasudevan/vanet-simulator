@@ -5,14 +5,14 @@ import java.util.Iterator;
 import java.util.Queue;
 import java.util.Random;
 
-import org.jfree.chart.ChartFactory;
+/*import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
-
+*/
 public class Simulator {
 	// Parameters
 	static int no_timesteps = 10000;
@@ -40,7 +40,7 @@ public class Simulator {
 	static double grid_cost = 0.06;
 	static double solar_cost = 0.001;
 	static double[] min_pdr = new double[no_episodes];
-	static boolean fixed_cars = false;
+	static boolean fixed_cars = true;
 	static boolean uniform = true;
 	static int fixed_cars_no = 300; // No. of cars to enter from each dxn
 
@@ -55,6 +55,9 @@ public class Simulator {
 	static boolean trackVehicle = false;
 	static boolean trackRSU = false;
 	static boolean printTimestep = false;
+	static boolean printEpisode = false;
+	static boolean finalStats = false;
+	static boolean printAvgPDR = true;
 
 	// Output datapts, graphs
 	static boolean printData = false;
@@ -83,15 +86,18 @@ public class Simulator {
 	static int tx_delay = (int) (pkt_size / bandwidth);
 
 	public static void main(String[] args) {
+		fixed_cars_no = Integer.parseInt(args[0]); //TODO
 		min_pdr[0] = 0.01;
 		min_pdr[1] = 0.02;
 		min_pdr[2] = 0.03;
 		min_pdr[3] = 0.04;
 
 		for (episode_no = 0; episode_no < no_episodes; episode_no++) {
-			lambda_vehicle += 0.5;
-			System.out.println("Episode " + episode_no);
-			System.out.println("-----------");
+			lambda_vehicle += 0.5; //TODO
+			if (printEpisode) {
+				System.out.println("Episode " + episode_no);
+				System.out.println("-----------");
+			}
 			resetSimulator();
 			initSimulator();
 			ArrayList<RSU> templist = new ArrayList<RSU>();
@@ -107,10 +113,12 @@ public class Simulator {
 			} else {
 				Uprime = RPR(templist, min_pdr[episode_no]);
 			}
-			for (int i = 0; i < Uprime.size(); i++) {
-				System.out.print(Uprime.get(i).id + ", ");
+			if (trackRSU) {
+				for (int i = 0; i < Uprime.size(); i++) {
+					System.out.print(Uprime.get(i).id + ", ");
+				}
+				System.out.println("selected");
 			}
-			System.out.println("selected");
 			int maxsize = 0;
 			int maxlen = 0;
 			for (timestep_no = 0; timestep_no < no_timesteps; timestep_no++) {
@@ -155,18 +163,23 @@ public class Simulator {
 					}
 				}
 			}
-			System.out.println("Packets received:" + recvd + ", generated:"
-					+ generated + ", dropped:" + dropped + ", remaining:"
-					+ remainder.size() + ". PDR = " + (float) recvd / generated
-					+ ", V2I pkt delay = " + (float) recv_time / recvd
-					+ ", OPEX = " + opex + ", Total Energy = " + total_energy);
+			if (finalStats) {
+				System.out.println("Packets received:" + recvd + ", generated:"
+						+ generated + ", dropped:" + dropped + ", remaining:"
+						+ remainder.size() + ". PDR = " + (float) recvd
+						/ generated + ", V2I pkt delay = " + (float) recv_time
+						/ recvd + ", OPEX = " + opex + ", Total Energy = "
+						+ total_energy);
+			}
 			avgpdr += (double) recvd / generated;
 			avgrxtime += (double) recv_time / recvd;
 			avgopex += opex;
 			avgenergy += total_energy;
-			System.out.println("Longest queue: " + maxsize
-					+ ", Max No. of Cars: " + maxlen + ", No. of RSUs: "
-					+ Uprime.size());
+			if (finalStats) {
+				System.out.println("Longest queue: " + maxsize
+						+ ", Max No. of Cars: " + maxlen + ", No. of RSUs: "
+						+ Uprime.size());
+			}
 		}
 
 		// Avg stats collected
@@ -183,12 +196,17 @@ public class Simulator {
 		avgenergy /= no_episodes;
 
 		if (genGraphs) {
-			plotSegdist();
-			plotGraphs();
+			//plotSegdist();
+			//plotGraphs();
 		}
-		System.out.println("Simulation completed. Avg. PDR = " + avgpdr
-				+ ", Avg. V2I pkt delay = " + avgrxtime + ", Avg. OPEX = "
-				+ avgopex + ", Avg. Total Energy = 0" + avgenergy);
+		if (finalStats) {
+			System.out.println("Simulation completed. Avg. PDR = " + avgpdr
+					+ ", Avg. V2I pkt delay = " + avgrxtime + ", Avg. OPEX = "
+					+ avgopex + ", Avg. Total Energy = 0" + avgenergy);
+		}
+		if(printAvgPDR) {
+			System.out.println(avgpdr);
+		}
 	}
 
 	private static void receivePackets() {
@@ -405,7 +423,7 @@ public class Simulator {
 			}
 		}
 	}
-
+/*
 	private static void plotGraphs() {
 		// Plots vehicle arrival distribution vs time
 		int width = 640;
@@ -447,7 +465,7 @@ public class Simulator {
 			e.printStackTrace();
 		}
 	}
-
+*/
 	private static void resetSimulator() {
 		// clear all data
 		for (Vehicle v : vehlist) {
