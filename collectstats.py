@@ -11,3 +11,4 @@ for _ in range(NUM):
 
 pdr = [x/NUM for x in pdr]
 print pdr
+
