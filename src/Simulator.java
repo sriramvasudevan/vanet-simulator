@@ -40,6 +40,9 @@ public class Simulator {
 	static double grid_cost = 0.06;
 	static double solar_cost = 0.001;
 	static double[] min_pdr = new double[no_episodes];
+	static boolean fixed_cars = false;
+	static boolean uniform = true;
+	static int fixed_cars_no = 300; // No. of cars to enter from each dxn
 
 	// Exponential lambdas
 	static double lambda_vehicle = 3.0;
@@ -98,8 +101,12 @@ public class Simulator {
 					templist.add(row.get(j));
 				}
 			}
-			ArrayList<RSU> Uprime = templist; //TODO
-			//ArrayList<RSU> Uprime = RPR(templist, min_pdr[episode_no]);
+			ArrayList<RSU> Uprime; // TODO
+			if (uniform) {
+				Uprime = templist;
+			} else {
+				Uprime = RPR(templist, min_pdr[episode_no]);
+			}
 			for (int i = 0; i < Uprime.size(); i++) {
 				System.out.print(Uprime.get(i).id + ", ");
 			}
@@ -597,19 +604,58 @@ public class Simulator {
 			}
 			int new_seg_x = (int) (v.pos_x / segment_len_x);
 			int new_seg_y = (int) (v.pos_y / segment_len_y);
+			// Vehicle outside boundaries
 			if (new_seg_x >= (road_len_x / segment_len_x) || new_seg_x < 0
 					|| new_seg_y >= (road_len_y / segment_len_y)
 					|| new_seg_y < 0) {
-				rsulist.get(v.segment_x).get(v.segment_y).idle = -1;
-				if (trackVehicle) {
-					System.out.println("Vehicle " + v.id + " deleted");
+				if (fixed_cars) {
+					// Loop the vehicle
+					// Put it at the border
+					if (new_seg_x >= (road_len_x / segment_len_x)) {
+						new_seg_x = (road_len_x / segment_len_x) - 1;
+					} else if (new_seg_x < 0) {
+						new_seg_x = 0;
+					}
+					if (new_seg_y >= (road_len_y / segment_len_y)) {
+						new_seg_y = (road_len_y / segment_len_y) - 1;
+					} else if (new_seg_y < 0) {
+						new_seg_y = 0;
+					}
+					// Change its direction
+					v.x_dxn *= -1;
+					v.y_dxn *= -1;
+					if (v.tx) {
+						rsulist.get(v.segment_x).get(v.segment_y).idle = -1;
+						rsulist.get(new_seg_x).get(new_seg_y).idle = v.id;
+					}
+					if (trackVehicle) {
+						System.out.println("Vehicle " + v.id
+								+ " tx seg change from (" + v.segment_x + ","
+								+ v.segment_y + ") to (" + new_seg_x + ","
+								+ new_seg_y + ")");
+					}
+					v.segment_x = new_seg_x;
+					v.segment_y = new_seg_y;
+					if (trackVehicle) {
+						System.out.println("Vehicle " + v.id + " new seg ("
+								+ v.segment_x + "," + v.segment_y + ")");
+					}
+				} else {
+					if (v.tx) {
+						rsulist.get(v.segment_x).get(v.segment_y).idle = -1;
+					}
+					if (trackVehicle) {
+						System.out.println("Vehicle " + v.id + " deleted");
+					}
+					iterator.remove();
 				}
-				iterator.remove();
 			} else {
 				if ((v.segment_x != new_seg_x || v.segment_y != new_seg_y)
 						&& v.tx) {
-					rsulist.get(v.segment_x).get(v.segment_y).idle = -1;
-					rsulist.get(new_seg_x).get(new_seg_y).idle = v.id;
+					if (v.tx) {
+						rsulist.get(v.segment_x).get(v.segment_y).idle = -1;
+						rsulist.get(new_seg_x).get(new_seg_y).idle = v.id;
+					}
 					if (trackVehicle) {
 						System.out.println("Vehicle " + v.id
 								+ " tx seg change from (" + v.segment_x + ","
@@ -626,69 +672,167 @@ public class Simulator {
 			}
 		}
 
-		// Generate vehicles along X and Y axes, in both dxns
-		int no_generated = (int) generateExp(lambda_vehicle);
-		veh_dist[timestep_no] += no_generated;
+		if (fixed_cars) {
+			if (timestep_no == 0) {
+				// Generate fixed no. of vehicles along X and Y axes, in both
+				// dxns
+				int no_generated = fixed_cars_no;
+				veh_dist[timestep_no] += no_generated;
 
-		if (trackVehicle) {
-			System.out.println(vehlist.size() + " vehicles present.");
-			System.out.println(no_generated + " vehicles gen from L to R:");
-		}
-		for (int i = 0; i < no_generated; i++) {
-			Vehicle to_add = new Vehicle(generateExp(lambda_velocity), +1, 0,
-					0, segment_len_y
-							* rand.nextInt((int) (road_len_y / segment_len_y)));
-			vehlist.add(to_add);
-			if (trackVehicle) {
-				System.out.println("Vehicle " + to_add.id);
+				if (trackVehicle) {
+					System.out.println(vehlist.size() + " vehicles present.");
+					System.out.println(no_generated
+							+ " vehicles gen from L to R:");
+				}
+				for (int i = 0; i < no_generated; i++) {
+					Vehicle to_add = new Vehicle(
+							generateExp(lambda_velocity),
+							+1,
+							0,
+							0,
+							segment_len_y
+									* rand.nextInt((int) (road_len_y / segment_len_y)));
+					vehlist.add(to_add);
+					if (trackVehicle) {
+						System.out.println("Vehicle " + to_add.id);
+					}
+				}
+
+				no_generated = fixed_cars_no;
+				if (trackVehicle) {
+					System.out.println(no_generated
+							+ " vehicles gen from R to L:");
+				}
+				for (int i = 0; i < no_generated; i++) {
+					Vehicle to_add = new Vehicle(
+							generateExp(lambda_velocity),
+							-1,
+							0,
+							road_len_x - 1,
+							segment_len_y
+									* rand.nextInt((int) (road_len_y / segment_len_y)));
+					vehlist.add(to_add);
+					if (trackVehicle) {
+						System.out.println("Vehicle " + to_add.id);
+					}
+				}
+				if (vert_traffic) {
+					no_generated = fixed_cars_no;
+					if (trackVehicle) {
+						System.out.println(no_generated
+								+ " vehicles gen from T to B:");
+					}
+					for (int i = 0; i < no_generated; i++) {
+						Vehicle to_add = new Vehicle(
+								generateExp(lambda_velocity),
+								0,
+								+1,
+								segment_len_x
+										* rand.nextInt((int) (road_len_x / segment_len_x)),
+								0);
+						vehlist.add(to_add);
+						if (trackVehicle) {
+							System.out.println("Vehicle " + to_add.id);
+						}
+					}
+
+					no_generated = fixed_cars_no;
+					if (trackVehicle) {
+						System.out.println(no_generated
+								+ " vehicles gen from B to T:");
+					}
+					for (int i = 0; i < no_generated; i++) {
+						Vehicle to_add = new Vehicle(
+								generateExp(lambda_velocity),
+								0,
+								-1,
+								segment_len_x
+										* rand.nextInt((int) (road_len_x / segment_len_x)),
+								road_len_y - 1);
+						vehlist.add(to_add);
+						if (trackVehicle) {
+							System.out.println("Vehicle " + to_add.id);
+						}
+					}
+				}
 			}
-		}
-		no_generated = (int) generateExp(lambda_vehicle);
-		if (trackVehicle) {
-			System.out.println(no_generated + " vehicles gen from R to L:");
-		}
-		for (int i = 0; i < no_generated; i++) {
-			Vehicle to_add = new Vehicle(generateExp(lambda_velocity), -1, 0,
-					road_len_x - 1, segment_len_y
-							* rand.nextInt((int) (road_len_y / segment_len_y)));
-			vehlist.add(to_add);
+		} else {
+			// Generate random no. of vehicles along X and Y axes, in both dxns
+			int no_generated = (int) generateExp(lambda_vehicle);
+			veh_dist[timestep_no] += no_generated;
+
 			if (trackVehicle) {
-				System.out.println("Vehicle " + to_add.id);
-			}
-		}
-		if (vert_traffic) {
-			no_generated = (int) generateExp(lambda_vehicle);
-			if (trackVehicle) {
-				System.out.println(no_generated + " vehicles gen from T to B:");
+				System.out.println(vehlist.size() + " vehicles present.");
+				System.out.println(no_generated + " vehicles gen from L to R:");
 			}
 			for (int i = 0; i < no_generated; i++) {
 				Vehicle to_add = new Vehicle(
 						generateExp(lambda_velocity),
-						0,
 						+1,
-						segment_len_x
-								* rand.nextInt((int) (road_len_x / segment_len_x)),
-						0);
+						0,
+						0,
+						segment_len_y
+								* rand.nextInt((int) (road_len_y / segment_len_y)));
 				vehlist.add(to_add);
 				if (trackVehicle) {
 					System.out.println("Vehicle " + to_add.id);
 				}
 			}
+
 			no_generated = (int) generateExp(lambda_vehicle);
 			if (trackVehicle) {
-				System.out.println(no_generated + " vehicles gen from B to T:");
+				System.out.println(no_generated + " vehicles gen from R to L:");
 			}
 			for (int i = 0; i < no_generated; i++) {
 				Vehicle to_add = new Vehicle(
 						generateExp(lambda_velocity),
-						0,
 						-1,
-						segment_len_x
-								* rand.nextInt((int) (road_len_x / segment_len_x)),
-						road_len_y - 1);
+						0,
+						road_len_x - 1,
+						segment_len_y
+								* rand.nextInt((int) (road_len_y / segment_len_y)));
 				vehlist.add(to_add);
 				if (trackVehicle) {
 					System.out.println("Vehicle " + to_add.id);
+				}
+			}
+			if (vert_traffic) {
+				no_generated = (int) generateExp(lambda_vehicle);
+				if (trackVehicle) {
+					System.out.println(no_generated
+							+ " vehicles gen from T to B:");
+				}
+				for (int i = 0; i < no_generated; i++) {
+					Vehicle to_add = new Vehicle(
+							generateExp(lambda_velocity),
+							0,
+							+1,
+							segment_len_x
+									* rand.nextInt((int) (road_len_x / segment_len_x)),
+							0);
+					vehlist.add(to_add);
+					if (trackVehicle) {
+						System.out.println("Vehicle " + to_add.id);
+					}
+				}
+
+				no_generated = (int) generateExp(lambda_vehicle);
+				if (trackVehicle) {
+					System.out.println(no_generated
+							+ " vehicles gen from B to T:");
+				}
+				for (int i = 0; i < no_generated; i++) {
+					Vehicle to_add = new Vehicle(
+							generateExp(lambda_velocity),
+							0,
+							-1,
+							segment_len_x
+									* rand.nextInt((int) (road_len_x / segment_len_x)),
+							road_len_y - 1);
+					vehlist.add(to_add);
+					if (trackVehicle) {
+						System.out.println("Vehicle " + to_add.id);
+					}
 				}
 			}
 		}
@@ -792,13 +936,17 @@ public class Simulator {
 			if (new_seg_x >= (road_len_x / segment_len_x) || new_seg_x < 0
 					|| new_seg_y >= (road_len_y / segment_len_y)
 					|| new_seg_y < 0) {
-				rsulist.get(v.segment_x).get(v.segment_y).idle = -1;
+				if (v.tx) {
+					rsulist.get(v.segment_x).get(v.segment_y).idle = -1;
+				}
 				iterator.remove();
 			} else {
 				if ((v.segment_x != new_seg_x || v.segment_y != new_seg_y)
 						&& v.tx) {
-					rsulist.get(v.segment_x).get(v.segment_y).idle = -1;
-					rsulist.get(new_seg_x).get(new_seg_y).idle = v.id;
+					if (v.tx) {
+						rsulist.get(v.segment_x).get(v.segment_y).idle = -1;
+						rsulist.get(new_seg_x).get(new_seg_y).idle = v.id;
+					}
 				}
 				v.segment_x = new_seg_x;
 				v.segment_y = new_seg_y;
