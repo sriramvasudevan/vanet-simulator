@@ -26,9 +26,17 @@ public class Simulator {
 	 */
 	static int no_timesteps = 10000;
 	/**
+	 * No. of timesteps in an episode (RPR simulation)
+	 */
+	static int rpr_no_timesteps = 1000;
+	/**
 	 * No. of episodes
 	 */
 	static int no_episodes = 4;
+	/**
+	 * No. of episodes (RPR simulation)
+	 */
+	static int rpr_no_episodes = 1;
 	/**
 	 * Length of the road in the X direction, in meters.
 	 */
@@ -276,7 +284,7 @@ public class Simulator {
 	 */
 	static double total_energy = 0.0;
 	/**
-	 * Average OPEX costs, after all episodes 
+	 * Average OPEX costs, after all episodes
 	 */
 	static double avgopex = 0.0;
 	/**
@@ -292,7 +300,8 @@ public class Simulator {
 	 */
 	static double[] veh_dist = new double[no_timesteps];
 	/**
-	 * Time taken to transmit a single packet, computed using pkt_size and bandwidth
+	 * Time taken to transmit a single packet, computed using pkt_size and
+	 * bandwidth
 	 */
 	static int tx_delay = (int) (pkt_size / bandwidth);
 
@@ -652,6 +661,7 @@ public class Simulator {
 					}
 				}
 				if (contained) {
+					// RSU in Uprime, compute values
 					int delta_e_serve = num_delivered[i][j] * tx_delay * rx_pow
 							+ (timeslot_len - num_delivered[i][j] * tx_delay)
 							* res_pow;
@@ -1210,7 +1220,8 @@ public class Simulator {
 	 * toggleRSU(). rsulist is the list of RSUs that are available,
 	 * num_delivered keeps track of the number of packets delivered in a time
 	 * slot, u is the new RSU being considered (if to add to Uprime, the list of
-	 * RSUs that are to be installed).
+	 * RSUs that are to be installed). Functioning is same as toggleRSU()
+	 * mostly.
 	 * 
 	 * @param rsulist
 	 *            the list of RSUs generated for the RPR simulation
@@ -1283,6 +1294,8 @@ public class Simulator {
 	 * and generate packets for vehicles. Vehicles are generated along a 1D road
 	 * only. rsulist is the entire list of RSUs, vehlist is the list of vehicles
 	 * and u is the RSU under consideration currently in the RPR algorithm.
+	 * Functioning is same as generateVehicles, generatePackets() and
+	 * changeVelocity() mostly.
 	 * 
 	 * @param rsulist
 	 *            the list of RSUs generated for the RPR simulation
@@ -1351,7 +1364,7 @@ public class Simulator {
 	/**
 	 * Method called by RPR algorithm. Helps transmit packets from vehicles.
 	 * Parameters are the entire list of RSUs, rsulist and the list of vehicles,
-	 * vehlist.
+	 * vehlist. Functioning is same as transmitPackets() mostly.
 	 * 
 	 * @param rsulist
 	 *            the list of RSUs generated for the RPR simulation
@@ -1413,7 +1426,8 @@ public class Simulator {
 	 * Helps vehicles deliver packets to other vehicles and RSUs. Used by the
 	 * RPR algorithm. Parameters are the RSU list rsulist, and the list of
 	 * vehicles, vehlist, the number of pkts delivered in the current time slot
-	 * and the RSU under consideration, u.
+	 * and the RSU under consideration, u. Functioning is same as
+	 * receivePackets() mostly.
 	 * 
 	 * @param rsulist
 	 *            the list of RSUs generated for the RPR simulation
@@ -1504,7 +1518,7 @@ public class Simulator {
 
 	/**
 	 * Takes the RSU under consideration by the RPR algorithm, u, and the RSUs
-	 * to be installed, Uprime, and computes PDR, Energy and Grid fraction
+	 * to be installed, Uprime, and computes PDR, Energy and Grid fraction.
 	 * 
 	 * @param u
 	 *            the RSU being considered
@@ -1513,8 +1527,10 @@ public class Simulator {
 	 * @return PDR, Energy and Grid Fraction values for RSU u.
 	 */
 	public static double[] getStats(RSU u, ArrayList<RSU> Uprime) {
-		int no_episodes = 1;
-		int no_timesteps = 1000;
+		// Generate local copies of global variables for RPR simulation
+		// We don't want to mess up our global values
+		int no_episodes = rpr_no_episodes;
+		int no_timesteps = rpr_no_timesteps;
 		double[] avgvals = new double[4];
 		int[][] num_delivered = new int[road_len_x / segment_len_x][road_len_y
 				/ segment_len_y];
@@ -1525,6 +1541,7 @@ public class Simulator {
 		ArrayList<ArrayList<RSU>> rsulist = new ArrayList<ArrayList<RSU>>();
 		ArrayList<Vehicle> vehlist = new ArrayList<Vehicle>();
 
+		// Generate a new RSU grid
 		for (int i = 0; i < (road_len_x / segment_len_x); i++) {
 			rsulist.add(new ArrayList<RSU>());
 			for (int j = 0; j < (road_len_y / segment_len_y); j++) {
@@ -1532,6 +1549,7 @@ public class Simulator {
 			}
 		}
 
+		// Obtain stats and average them
 		for (int episode_no = 0; episode_no < no_episodes; episode_no++) {
 			temparray = _toggleRSU(rsulist, num_delivered, u, Uprime);
 			for (int timestep_no = 0; timestep_no < no_timesteps; timestep_no++) {
@@ -1581,12 +1599,11 @@ public class Simulator {
 		while (!all_coverage_in_bound && U.size() != 0) {
 			ArrayList<RSU> S = new ArrayList<RSU>();
 			ArrayList<double[]> statlist = new ArrayList<double[]>();
+			//get stats for all RSUs
 			for (int i = 0; i < U.size(); i++) {
 				RSU u = U.get(i);
 				statlist.add(getStats(u, Uprime));
-				// System.out.println("print" + statlist.get(i)[0] + " "
-				// + statlist.get(i)[1] + " " + statlist.get(i)[2] + " "
-				// + statlist.get(i)[3]);
+				// if min pdr isn't satisfied, add to set S
 				if (statlist.get(i)[0] < min_pdr) {
 					S.add(u);
 				}
@@ -1597,6 +1614,7 @@ public class Simulator {
 			}
 			ArrayList<double[]> M = new ArrayList<double[]>();
 			int currcount = 0;
+			//Generate M, the corresponding feature set for S
 			for (int i = 0; i < U.size() && currcount < S.size(); i++) {
 				if (S.get(currcount).id == U.get(i).id) {
 					currcount++;
@@ -1608,7 +1626,9 @@ public class Simulator {
 					M.add(temp);
 				}
 			}
+			//obtain best RSU
 			RSU s = Rainbow_product_ranking(S, M);
+			//add best RSU to Uprime, remove from U
 			Uprime.add(s);
 			U.remove(s);
 		}
@@ -1630,6 +1650,7 @@ public class Simulator {
 	private static RSU Rainbow_product_ranking(ArrayList<RSU> S,
 			ArrayList<double[]> M) {
 		ArrayList<RSU> s = new ArrayList<RSU>();
+		// Generate the best skyline set s
 		for (int i = 0; i < S.size(); i++) {
 			RSU x = S.get(i);
 			double[] x_attr = M.get(i);
@@ -1645,6 +1666,7 @@ public class Simulator {
 				s.add(x);
 			}
 		}
+		// Final sorting based on feature 0 here. Choose best point from s.
 		int best_candidate = 0;
 		double[] best_attr = M.get(best_candidate);
 		for (int i = 1; i < s.size(); i++) {
