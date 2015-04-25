@@ -1,3 +1,4 @@
+# Place results obtained from collectstats.py here to obtain plots. Set pdr equal to the array obtained from collectstats.py, and the car list equal to what was specified in collectstats.py
 import matplotlib.pyplot as plt
 
 # Larger values

@@ -1,3 +1,4 @@
+# Given two logfiles - one with RPR results and the other with the Uniform results - plot Vageesh's graphs of delay, energy, opex and num_rsus vs min_pdr. finalStats is true, printEpisode is true, printTimestep is false, as are other print booleans.
 import re
 import matplotlib.pyplot as plt
 import math
