@@ -5,95 +5,333 @@ import java.util.Iterator;
 import java.util.Queue;
 import java.util.Random;
 
-/*import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
-*/
+
+/**
+ * The main simulator class. Handles the entire VANET simulation.
+ * 
+ * @author sriram
+ *
+ */
 public class Simulator {
 	// Parameters
+	/**
+	 * No. of timesteps in an episode
+	 */
 	static int no_timesteps = 10000;
+	/**
+	 * No. of episodes
+	 */
 	static int no_episodes = 4;
+	/**
+	 * Length of the road in the X direction, in meters.
+	 */
 	static int road_len_x = 20000;
+	/**
+	 * Length of a segment in the X direction, in meters.
+	 */
 	static int segment_len_x = 2000;
-	// Setting road_len_y = segment_len_y ensures there is only one L-R road
+	/**
+	 * Length of the road in the Y direction, in meters. Setting road_len_y =
+	 * segment_len_y ensures there is only one L-R road
+	 */
 	static int road_len_y = 1000;
+	/**
+	 * Length of a segment in the Y direction, in meters.
+	 */
 	static int segment_len_y = 1000;
+	/**
+	 * Size of a packet in bytes
+	 */
 	static int pkt_size = 200;
+	/**
+	 * Number of hops to check for idleness. No. of hops to check for hidden
+	 * terminals.
+	 */
 	static int num_hops = 3;
+	/**
+	 * Contention window lower bound.
+	 */
 	static int cw_min = 15;
+	/**
+	 * Contention window upper bound.
+	 */
 	static int cw_max = 1023;
+	/**
+	 * Max time to live before pkt is dropped
+	 */
 	static int max_ttl = 10;
 	// Remove T-B roads
+	/**
+	 * True turns on traffic in the Y direction as well
+	 */
 	static boolean vert_traffic = false;
+	/**
+	 * Maximum battery capacity, in Whr.
+	 */
 	static double max_battery = 240;
+	/**
+	 * Length of a timeslot, in terms of number of timesteps. Used to keep track
+	 * of number of packets delivered in a timeslot.
+	 */
 	static int timeslot_len = 10;
+	/**
+	 * Radio power during reception, in J
+	 */
 	static int rx_pow = 10;
+	/**
+	 * Radio power during idle state, in J
+	 */
 	static int res_pow = 9;
+	/**
+	 * Bandwidth, in Mbps
+	 */
 	static double bandwidth = 40;
+	/**
+	 * Battery profile in Whr. Change this for different times of the day
+	 */
 	static int battery_profile = 40;
+	/**
+	 * Switching energy, in J
+	 */
 	static int delta_e_switch = 50;
+	/**
+	 * Minimum battery value, in Whr
+	 */
 	static int battery_delta = 12;
+	/**
+	 * Grid energy cost in $ per kWhr
+	 */
 	static double grid_cost = 0.06;
+	/**
+	 * Solar energy cost in $ per KWhr
+	 */
 	static double solar_cost = 0.001;
+	/**
+	 * An array to store minimum PDR values (used by RPR). Each element is used
+	 * in a different episode, so that trends can be observed if different
+	 * values are given.
+	 */
 	static double[] min_pdr = new double[no_episodes];
-	static boolean fixed_cars = true;
-	static boolean uniform = true;
+	/**
+	 * A boolean to set if cars are to be a fixed number (true), or to be
+	 * sampled (false).
+	 */
+	static boolean fixed_cars = false;
+	/**
+	 * Setting this to true selects all RSUs, giving a uniform distribution.
+	 * False enables RPR.
+	 */
+	static boolean uniform = false;
+	/**
+	 * Number of fixed cars to generate, if fixed_cars is true. Unused if false.
+	 */
 	static int fixed_cars_no = 300; // No. of cars to enter from each dxn
+	/**
+	 * A commandline mode that when set true accepts a single parameter, the
+	 * fixed no. of cars, and prints a single value, the average PDR. Useful to
+	 * plot number of vehicles vs PDR.
+	 */
+	static boolean pdr_fixedcars = false;
+	/**
+	 * Increment the minimum PDR after each episode if true.
+	 */
+	static boolean inc_min_pdr = true;
+	/**
+	 * Initial minimum PDR to use
+	 */
+	static double init_min_pdr = 0.01;
+	/**
+	 * Step by which to increase the minimum PDR, after every episode.
+	 */
+	static double step_min_pdr = 0.01;
 
 	// Exponential lambdas
+	/**
+	 * Parameter for the exponential sampling vehicles
+	 */
 	static double lambda_vehicle = 3.0;
+	/**
+	 * Parameter for the exponential sampling velocity
+	 */
 	static double lambda_velocity = 0.1;
+	/**
+	 * Parameter for the exponential sampling Packets
+	 */
 	static double lambda_pkt = 3.0;
+	/**
+	 * Parameter for the exponential sampling the countdown timer of the
+	 * vehicles
+	 */
 	static double lambda_countdown = 0.2;
 
 	// Logfile Trackers
+	/**
+	 * Set to true if packets are to be tracked through the simulation. Displays
+	 * data if true.
+	 */
 	static boolean trackPkt = false;
+	/**
+	 * Set to true if vehicles are to be tracked through the simulation.
+	 * Displays data if true.
+	 */
 	static boolean trackVehicle = false;
+	/**
+	 * Set to true if RSUs are to be tracked through the simulation. Displays
+	 * data if true.
+	 */
 	static boolean trackRSU = false;
-	static boolean printTimestep = false;
-	static boolean printEpisode = false;
-	static boolean finalStats = false;
-	static boolean printAvgPDR = true;
+	/**
+	 * Print a separator indicating the beginning of a new timestep, if true.
+	 */
+	static boolean printTimestep = true;
+	/**
+	 * Print a separator indicating the beginning of a new episode, if true.
+	 */
+	static boolean printEpisode = true;
+	/**
+	 * Print final statistics collected after every episode, as well as average
+	 * statistics
+	 */
+	static boolean finalStats = true;
+	/**
+	 * Print only average PDR in a separate line. Set to true automatically if
+	 * pdr_fixedcars is true.
+	 */
+	static boolean printAvgPDR = false;
 
 	// Output datapts, graphs
+	/**
+	 * Print vehicle arrival distribution and avg. segment density distribution
+	 * details. Useful if plots are to be generated external to the program.
+	 */
 	static boolean printData = false;
+	/**
+	 * Plot vehicle distribution and avg. segment density distribution.
+	 */
 	static boolean genGraphs = true;
 
 	// Simulator vars
+	/**
+	 * The random variable generator
+	 */
 	static Random rand = new Random();
+	/**
+	 * The 2D list containing the RSUs,
+	 */
 	static ArrayList<ArrayList<RSU>> rsulist = new ArrayList<ArrayList<RSU>>();
+	/**
+	 * The list containing current vehicles in the grid.
+	 */
 	static ArrayList<Vehicle> vehlist = new ArrayList<Vehicle>();
+	/**
+	 * Number of packets received
+	 */
 	static int recvd = 0;
+	/**
+	 * Time taken to receive a packet
+	 */
 	static int recv_time = 0;
+	/**
+	 * Number of packets generated
+	 */
 	static int generated = 0;
+	/**
+	 * Number of packets dropped
+	 */
 	static int dropped = 0;
+	/**
+	 * Number of packets delivered at an RSU, in a timeslot
+	 */
 	static int[][] num_delivered = new int[road_len_x / segment_len_x][road_len_y
 			/ segment_len_y];
+	/**
+	 * Current episode number
+	 */
 	static int episode_no = 0;
+	/**
+	 * Current timestep number
+	 */
 	static int timestep_no = 0;
+	/**
+	 * Average PDR after all episodes
+	 */
 	static double avgpdr = 0.0;
+	/**
+	 * Average packet reception time after all episodes
+	 */
 	static double avgrxtime = 0.0;
+	/**
+	 * Operational exchange costs
+	 */
 	static double opex = 0.0;
+	/**
+	 * Total energy consumed
+	 */
 	static double total_energy = 0.0;
+	/**
+	 * Average OPEX costs, after all episodes 
+	 */
 	static double avgopex = 0.0;
+	/**
+	 * Average energy consumed, after all episodes
+	 */
 	static double avgenergy = 0.0;
+	/**
+	 * 2D array to keep track of avg segment vehicle density distribution
+	 */
 	static double[] seg_dist = new double[road_len_x / segment_len_x];
+	/**
+	 * 2D array to keep track of vehicle arrival distribution
+	 */
 	static double[] veh_dist = new double[no_timesteps];
+	/**
+	 * Time taken to transmit a single packet, computed using pkt_size and bandwidth
+	 */
 	static int tx_delay = (int) (pkt_size / bandwidth);
 
+	/**
+	 * The main function. If pdr_fixedcars is true, the fixed no of cars can be
+	 * passed as an argument, and will print the average pdr. If pdr_fixedcars
+	 * is false, doesn't take any parameter. Print booleans can be modified to
+	 * change displayed output.
+	 * 
+	 * @param args
+	 */
 	public static void main(String[] args) {
-		fixed_cars_no = Integer.parseInt(args[0]); //TODO
-		min_pdr[0] = 0.01;
-		min_pdr[1] = 0.02;
-		min_pdr[2] = 0.03;
-		min_pdr[3] = 0.04;
+		if (pdr_fixedcars) {
+			fixed_cars_no = Integer.parseInt(args[0]);
+			fixed_cars = true;
+			uniform = true;
+			trackPkt = false;
+			trackVehicle = false;
+			trackRSU = false;
+			printTimestep = false;
+			printEpisode = false;
+			finalStats = false;
+			printAvgPDR = true;
+			printData = false;
+			genGraphs = false;
+		}
+
+		if (inc_min_pdr) {
+			min_pdr[0] = init_min_pdr;
+			for (int i = 1; i < min_pdr.length; i++) {
+				min_pdr[i] = min_pdr[i - 1] + step_min_pdr;
+			}
+		} else {
+			for (int i = 1; i < min_pdr.length; i++) {
+				min_pdr[i] = init_min_pdr;
+			}
+		}
 
 		for (episode_no = 0; episode_no < no_episodes; episode_no++) {
-			lambda_vehicle += 0.5; //TODO
 			if (printEpisode) {
 				System.out.println("Episode " + episode_no);
 				System.out.println("-----------");
@@ -107,7 +345,7 @@ public class Simulator {
 					templist.add(row.get(j));
 				}
 			}
-			ArrayList<RSU> Uprime; // TODO
+			ArrayList<RSU> Uprime;
 			if (uniform) {
 				Uprime = templist;
 			} else {
@@ -144,16 +382,6 @@ public class Simulator {
 					maxsize = Math.max(maxsize, v.pktqueue.size());
 				}
 				maxlen = Math.max(maxlen, vehlist.size());
-			}
-			if (printData) {
-				System.out.println("vehdist " + episode_no);
-				for (int i = 0; i < veh_dist.length; i++) {
-					System.out.println(i + "," + veh_dist[i]);
-				}
-				System.out.println("segdist " + episode_no);
-				for (int i = 0; i < seg_dist.length; i++) {
-					System.out.println(i + "," + seg_dist[i]);
-				}
 			}
 			ArrayList<Integer> remainder = new ArrayList<Integer>();
 			for (Vehicle v : vehlist) {
@@ -196,19 +424,33 @@ public class Simulator {
 		avgenergy /= no_episodes;
 
 		if (genGraphs) {
-			//plotSegdist();
-			//plotGraphs();
+			plotSegdist();
+			plotGraphs();
+		}
+		if (printData) {
+			System.out.println("vehdist " + episode_no);
+			for (int i = 0; i < veh_dist.length; i++) {
+				System.out.println(i + "," + veh_dist[i]);
+			}
+			System.out.println("segdist " + episode_no);
+			for (int i = 0; i < seg_dist.length; i++) {
+				System.out.println(i + "," + seg_dist[i]);
+			}
 		}
 		if (finalStats) {
 			System.out.println("Simulation completed. Avg. PDR = " + avgpdr
 					+ ", Avg. V2I pkt delay = " + avgrxtime + ", Avg. OPEX = "
 					+ avgopex + ", Avg. Total Energy = 0" + avgenergy);
 		}
-		if(printAvgPDR) {
+		if (printAvgPDR) {
 			System.out.println(avgpdr);
 		}
 	}
 
+	/**
+	 * Function that handles the reception (of currently broadcast packets in a
+	 * segment) by both RSUs and vehicles.
+	 */
 	private static void receivePackets() {
 		if (timestep_no % timeslot_len == 0) {
 			for (int i = 0; i < (road_len_x / segment_len_x); i++) {
@@ -342,6 +584,15 @@ public class Simulator {
 		}
 	}
 
+	/**
+	 * Returns the object with the given id in the passed list of vehicles.
+	 * 
+	 * @param vehlist
+	 *            the list of vehicles
+	 * @param id
+	 *            id of the vehicle to be found
+	 * @return null or Vehicle object
+	 */
 	private static Vehicle getByID(ArrayList<Vehicle> vehlist, int id) {
 		// Get a vehicle by its internal ID
 		for (Vehicle v : vehlist) {
@@ -352,6 +603,15 @@ public class Simulator {
 		return null;
 	}
 
+	/**
+	 * Deletes a packet with the given id in the passed packet queue
+	 * 
+	 * @param queue
+	 *            the packet queue of a vehicle
+	 * @param id
+	 *            the packet to be deleted
+	 * @return Boolean indicating success/failure of the delete task
+	 */
 	private static boolean delPktID(Queue<Packet> queue, int id) {
 		for (Iterator<Packet> iterator = queue.iterator(); iterator.hasNext();) {
 			Packet p = iterator.next();
@@ -363,6 +623,16 @@ public class Simulator {
 		return false;
 	}
 
+	/**
+	 * Turns RSUs on if there is at least one vehicle in the corresponding
+	 * segment. Else turns them off. Also updates energy stats, battery status,
+	 * whether an RSU is using solar power or grid power. The passed parameter
+	 * Uprime is the set of 'installed' RSUs; any RSU not in this list is
+	 * permanently turned off.
+	 * 
+	 * @param Uprime
+	 *            The list of installed RSUs
+	 */
 	private static void toggleRSU(ArrayList<RSU> Uprime) {
 		// Turn RSU on if there is at least one vehicle in the corresponding
 		// segment.
@@ -423,7 +693,10 @@ public class Simulator {
 			}
 		}
 	}
-/*
+
+	/**
+	 * Plots the arrival distribution of vehicles.
+	 */
 	private static void plotGraphs() {
 		// Plots vehicle arrival distribution vs time
 		int width = 640;
@@ -445,6 +718,9 @@ public class Simulator {
 		}
 	}
 
+	/**
+	 * Plots the avg segment density per km
+	 */
 	private static void plotSegdist() {
 		// Plot no. of vehicles vs segment no.
 		int width = 640;
@@ -465,7 +741,10 @@ public class Simulator {
 			e.printStackTrace();
 		}
 	}
-*/
+
+	/**
+	 * Resets all variables after every episode
+	 */
 	private static void resetSimulator() {
 		// clear all data
 		for (Vehicle v : vehlist) {
@@ -486,6 +765,9 @@ public class Simulator {
 		RSU.resetCounter();
 	}
 
+	/**
+	 * Generates a 2D grid of RSUs
+	 */
 	private static void initSimulator() {
 		// initialize the simulator with RSUs in every segment in the grid
 		for (int i = 0; i < (road_len_x / segment_len_x); i++) {
@@ -496,6 +778,12 @@ public class Simulator {
 		}
 	}
 
+	/**
+	 * Handles the transmission of packets from vehicles. Drops packets whose
+	 * delay bound is reached. Checks if backoff counter is zero, if no tx in 3
+	 * hop neighbourhood and if no tx at current node, and then whether to tx or
+	 * backoff.
+	 */
 	private static void transmitPackets() {
 		ArrayList<ArrayList<ArrayList<Vehicle>>> tx_candidate = new ArrayList<ArrayList<ArrayList<Vehicle>>>();
 		for (int i = 0; i < (road_len_x / segment_len_x); i++) {
@@ -581,6 +869,17 @@ public class Simulator {
 		}
 	}
 
+	/**
+	 * Checks of the num_hops hop neighbourhood of a vehicle v is tx-free, by
+	 * checking if there is any tx at the neighbouring RSUs.
+	 * 
+	 * @param rsulist
+	 *            the list of RSUs
+	 * @param v
+	 *            The vehicle whose neighbourhood is to be checked
+	 * @return A boolean indicating if the neighbourhood of vehicle v is idle or
+	 *         not.
+	 */
 	private static boolean checkNbhdIdle(ArrayList<ArrayList<RSU>> rsulist,
 			Vehicle v) {
 		for (int i = Math.max(0, v.segment_x - num_hops); i <= Math.min(
@@ -598,6 +897,13 @@ public class Simulator {
 		return true;
 	}
 
+	/**
+	 * Generates a random double sampled from an exponential distribution with
+	 * parameter lambda. Performs inverse transform sampling.
+	 * 
+	 * @param lambda
+	 * @return A random number sampled from the exponential distribution
+	 */
 	public static double generateExp(double lambda) {
 		// Generate random var sampled from exp dist
 		// Computed using inverse sampling method
@@ -608,6 +914,11 @@ public class Simulator {
 		return Math.log(1 - rand.nextFloat()) / (-lambda);
 	}
 
+	/**
+	 * Generates new vehicles, updates positions of old vehicles, checks for
+	 * boundary conditions, decides if to loop them (fixed_cars) or to let them
+	 * exit the grid.
+	 */
 	private static void generateVehicles() {
 		// Compute new posn for all vehicles and remove those that have left the
 		// grid
@@ -856,6 +1167,10 @@ public class Simulator {
 		}
 	}
 
+	/**
+	 * Generates packets for all vehicles in vehlist by sampling an exponential
+	 * distribution.
+	 */
 	private static void generatePackets() {
 		for (Vehicle v : vehlist) {
 			int no_generated = (int) generateExp(lambda_pkt);
@@ -871,6 +1186,11 @@ public class Simulator {
 		}
 	}
 
+	/**
+	 * Changes the velocity of vehicles in vehlist by making use of each
+	 * vehicle's timer, and samples a new velocity from an exponential
+	 * distribution once the countdown reaches zero.
+	 */
 	private static void changeVelocity() {
 		for (Vehicle v : vehlist) {
 			if (v.checkTimer()) {
@@ -885,9 +1205,26 @@ public class Simulator {
 		}
 	}
 
+	/**
+	 * A method called only by the RPR algorithm, meant for toggling RSUs as in
+	 * toggleRSU(). rsulist is the list of RSUs that are available,
+	 * num_delivered keeps track of the number of packets delivered in a time
+	 * slot, u is the new RSU being considered (if to add to Uprime, the list of
+	 * RSUs that are to be installed).
+	 * 
+	 * @param rsulist
+	 *            the list of RSUs generated for the RPR simulation
+	 * @param num_delivered
+	 *            number of pkts delivered in the current timeslot
+	 * @param u
+	 *            the RSU under consideration
+	 * @param Uprime
+	 *            the RSUs already chosen
+	 * @return Returns fraction of grid energy consumed and the energy consumed
+	 *         by RSU u as an array
+	 */
 	private static double[] _toggleRSU(ArrayList<ArrayList<RSU>> rsulist,
-			int[][] num_delivered, RSU u, ArrayList<RSU> Uprime,
-			double gridfract) {
+			int[][] num_delivered, RSU u, ArrayList<RSU> Uprime) {
 		double num = 0.0;
 		double den = 0.0;
 		double energy_u = 0.0;
@@ -941,6 +1278,20 @@ public class Simulator {
 		return retval;
 	}
 
+	/**
+	 * Method called by the RPR algorithm to generate vehicles and change speeds
+	 * and generate packets for vehicles. Vehicles are generated along a 1D road
+	 * only. rsulist is the entire list of RSUs, vehlist is the list of vehicles
+	 * and u is the RSU under consideration currently in the RPR algorithm.
+	 * 
+	 * @param rsulist
+	 *            the list of RSUs generated for the RPR simulation
+	 * @param vehlist
+	 *            the list of vehicles generated for the RPR simulation
+	 * @param u
+	 *            the RSU under consideration
+	 * @return Number of packets generated
+	 */
 	private static int _generateVehicles(ArrayList<ArrayList<RSU>> rsulist,
 			ArrayList<Vehicle> vehlist, RSU u) {
 		int generated = 0;
@@ -991,15 +1342,22 @@ public class Simulator {
 			no_generated = (int) generateExp(lambda_pkt);
 			for (int i = 0; i < no_generated; i++) {
 				v.pktqueue.add(new Packet(v.id, pkt_size));
-				// if (v.segment_x == u.segment_x && v.segment_y == u.segment_y)
-				// {//TODO
 				generated++;
-				// }
 			}
 		}
 		return generated;
 	}
 
+	/**
+	 * Method called by RPR algorithm. Helps transmit packets from vehicles.
+	 * Parameters are the entire list of RSUs, rsulist and the list of vehicles,
+	 * vehlist.
+	 * 
+	 * @param rsulist
+	 *            the list of RSUs generated for the RPR simulation
+	 * @param vehlist
+	 *            the list of vehilces generated for the RPR simulation
+	 */
 	private static void _transmitPackets(ArrayList<ArrayList<RSU>> rsulist,
 			ArrayList<Vehicle> vehlist) {
 		ArrayList<ArrayList<ArrayList<Vehicle>>> tx_candidate = new ArrayList<ArrayList<ArrayList<Vehicle>>>();
@@ -1051,6 +1409,22 @@ public class Simulator {
 		}
 	}
 
+	/**
+	 * Helps vehicles deliver packets to other vehicles and RSUs. Used by the
+	 * RPR algorithm. Parameters are the RSU list rsulist, and the list of
+	 * vehicles, vehlist, the number of pkts delivered in the current time slot
+	 * and the RSU under consideration, u.
+	 * 
+	 * @param rsulist
+	 *            the list of RSUs generated for the RPR simulation
+	 * @param vehlist
+	 *            the list of vehilces generated for the RPR simulation
+	 * @param num_delivered
+	 *            number of packets delivered in the current time slot
+	 * @param u
+	 *            the RSU under consideration
+	 * @return The number of pkts received
+	 */
 	private static int _receivePackets(ArrayList<ArrayList<RSU>> rsulist,
 			ArrayList<Vehicle> vehlist, int[][] num_delivered, RSU u) {
 		int recvd = 0;
@@ -1098,9 +1472,7 @@ public class Simulator {
 							int to_remove = tx_vehicle.pktqueue.peek().id;
 							recv_time += (timestep_no - tx_vehicle.pktqueue
 									.peek().create_time);
-							// if (r.id == u.id) {//TODO
 							recvd++;
-							// }
 							num_delivered[i][j]++;
 							for (Vehicle v : vehlist) {
 								if (v.tx && v.pktqueue.peek().id == to_remove) {
@@ -1130,6 +1502,16 @@ public class Simulator {
 		return recvd;
 	}
 
+	/**
+	 * Takes the RSU under consideration by the RPR algorithm, u, and the RSUs
+	 * to be installed, Uprime, and computes PDR, Energy and Grid fraction
+	 * 
+	 * @param u
+	 *            the RSU being considered
+	 * @param Uprime
+	 *            the RSUs already chosen
+	 * @return PDR, Energy and Grid Fraction values for RSU u.
+	 */
 	public static double[] getStats(RSU u, ArrayList<RSU> Uprime) {
 		int no_episodes = 1;
 		int no_timesteps = 1000;
@@ -1151,8 +1533,7 @@ public class Simulator {
 		}
 
 		for (int episode_no = 0; episode_no < no_episodes; episode_no++) {
-			temparray = _toggleRSU(rsulist, num_delivered, u, Uprime,
-					temparray[0]);
+			temparray = _toggleRSU(rsulist, num_delivered, u, Uprime);
 			for (int timestep_no = 0; timestep_no < no_timesteps; timestep_no++) {
 				generated += _generateVehicles(rsulist, vehlist, u);
 				_transmitPackets(rsulist, vehlist);
@@ -1184,7 +1565,16 @@ public class Simulator {
 		return avgvals;
 	}
 
-	// According to Vageesh
+	/**
+	 * The modified RPR algorithm, implemented according to Vageesh's thesis.
+	 * Takes the set of RSUs U, and the min_pdr required.
+	 * 
+	 * @param U
+	 *            set of RSUs
+	 * @param min_pdr
+	 *            minimum PDR required
+	 * @return The final list of RSUs that need to be installed.
+	 */
 	private static ArrayList<RSU> RPR(ArrayList<RSU> U, double min_pdr) {
 		ArrayList<RSU> Uprime = new ArrayList<RSU>();
 		boolean all_coverage_in_bound = false;
@@ -1225,7 +1615,18 @@ public class Simulator {
 		return Uprime;
 	}
 
-	// According to the paper
+	/**
+	 * A single interation of the RPR algorithm that the original paper talks
+	 * about. Called by Vageesh's algorithm. Takes a list of RSUs S and their
+	 * features M, to build a skyline and suggest a single RSU to pick based on
+	 * the best features.
+	 * 
+	 * @param S
+	 *            a list of RSUs
+	 * @param M
+	 *            the features of the RSUs
+	 * @return The best candidate discovered by the RPR algorithm
+	 */
 	private static RSU Rainbow_product_ranking(ArrayList<RSU> S,
 			ArrayList<double[]> M) {
 		ArrayList<RSU> s = new ArrayList<RSU>();
