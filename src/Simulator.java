@@ -40,20 +40,20 @@ public class Simulator {
 	/**
 	 * Length of the road in the X direction, in meters.
 	 */
-	static int road_len_x = 20000;
+	static int road_len_x = 4000;
 	/**
 	 * Length of a segment in the X direction, in meters.
 	 */
-	static int segment_len_x = 2000;
+	static int segment_len_x = 1000;
 	/**
 	 * Length of the road in the Y direction, in meters. Setting road_len_y =
 	 * segment_len_y ensures there is only one L-R road
 	 */
-	static int road_len_y = 1000;
+	static int road_len_y = 100;
 	/**
 	 * Length of a segment in the Y direction, in meters.
 	 */
-	static int segment_len_y = 1000;
+	static int segment_len_y = 100;
 	/**
 	 * Size of a packet in bytes
 	 */
@@ -66,15 +66,15 @@ public class Simulator {
 	/**
 	 * Contention window lower bound.
 	 */
-	static int cw_min = 15;
+	static int cw_min = 10;
 	/**
 	 * Contention window upper bound.
 	 */
-	static int cw_max = 1023;
+	static int cw_max = 11;
 	/**
 	 * Max time to live before pkt is dropped
 	 */
-	static int max_ttl = 10;
+	static int max_ttl = 100;
 	// Remove T-B roads
 	/**
 	 * True turns on traffic in the Y direction as well
@@ -98,7 +98,7 @@ public class Simulator {
 	 */
 	static int res_pow = 9;
 	/**
-	 * Bandwidth, in Mbps
+	 * Bandwidth
 	 */
 	static double bandwidth = 40;
 	/**
@@ -340,6 +340,7 @@ public class Simulator {
 			printAvgPDR = true;
 			printData = false;
 			genGraphs = false;
+			inc_min_pdr = false;
 		}
 
 		if (inc_min_pdr) {
