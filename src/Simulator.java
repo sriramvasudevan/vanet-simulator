@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Random;
-
+/*
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
@@ -12,12 +12,12 @@ import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
-
+*/
 /**
  * The main simulator class. Handles the entire VANET simulation.
  * 
  * @author sriram
- *
+ * 
  */
 public class Simulator {
 	// Parameters
@@ -146,7 +146,7 @@ public class Simulator {
 	 * fixed no. of cars, and prints a single value, the average PDR. Useful to
 	 * plot number of vehicles vs PDR.
 	 */
-	static boolean pdr_fixedcars = false;
+	static boolean pdr_fixedcars = true;
 	/**
 	 * Increment the minimum PDR after each episode if true.
 	 */
@@ -159,6 +159,18 @@ public class Simulator {
 	 * Step by which to increase the minimum PDR, after every episode.
 	 */
 	static double step_min_pdr = 0.01;
+	/**
+	 * Noise constant in dBm
+	 */
+	static double NOISE_DBM = -127.0;
+	/**
+	 * Tx Power for Vehicle and RSU in dBm
+	 */
+	static double TxPower = 33;
+	/**
+	 * SINR Threshold value
+	 */
+	static double SINR_THRESH = 0.001;
 
 	// Exponential lambdas
 	/**
@@ -316,6 +328,7 @@ public class Simulator {
 	public static void main(String[] args) {
 		if (pdr_fixedcars) {
 			fixed_cars_no = Integer.parseInt(args[0]);
+			SINR_THRESH = Double.parseDouble(args[1]);
 			fixed_cars = true;
 			uniform = true;
 			trackPkt = false;
@@ -433,8 +446,8 @@ public class Simulator {
 		avgenergy /= no_episodes;
 
 		if (genGraphs) {
-			plotSegdist();
-			plotGraphs();
+		//	plotSegdist();
+		//	plotGraphs();
 		}
 		if (printData) {
 			System.out.println("vehdist " + episode_no);
@@ -522,65 +535,74 @@ public class Simulator {
 				// Bother about rx only if rsu is on and
 				// someone is transmitting
 				if (r.on && r.idle >= 0) {
-					Vehicle tx_vehicle = getByID(vehlist, r.idle);
-					if (r.idle == r.tx_id
-							&& tx_vehicle.pktqueue.peek().id == r.pkt_id) {
-						// same vehicle as before, same pkt
-						r.recv_tx--;
-						if (r.recv_tx == 0) {
-							// Pkt has been received completely. Remove pkt
-							// from
-							// all queues and reset tx vars
-							int to_remove = tx_vehicle.pktqueue.peek().id;
-							recv_time += (timestep_no - tx_vehicle.pktqueue
-									.peek().create_time);
-							recvd++;
-							num_delivered[i][j]++;
-							for (Vehicle v : vehlist) {
-								// if vehicle v is txing this pkt currently
-								// stop the tx
-								if (v.tx && v.pktqueue.peek().id == to_remove) {
-									v.tx = false;
-									RSU rx_rsu = rsulist.get(v.segment_x).get(
-											v.segment_y);
-									rx_rsu.tx_id = -1;
-									rx_rsu.pkt_id = -1;
-									rx_rsu.idle = -1;
-									// backoff randomly for next tx
-									v.backoff = rand.nextInt(cw_max - cw_min)
-											+ cw_min;
-								}
-								boolean removed = delPktID(v.pktqueue,
-										to_remove);
-								if (removed) {
-									if (trackPkt) {
-										System.out.println("pkt " + to_remove
-												+ " of vehicle " + v.id
-												+ " deleted");
+					// System.out.println("SINR " + calculateSINR(r));
+					// bother about tx only if SINR is above threshold
+					if (calculateSINR(r) > SINR_THRESH) {
+						Vehicle tx_vehicle = getByID(vehlist, r.idle);
+						if (r.idle == r.tx_id
+								&& tx_vehicle.pktqueue.peek().id == r.pkt_id) {
+							// same vehicle as before, same pkt
+							r.recv_tx--;
+							if (r.recv_tx == 0) {
+								// Pkt has been received completely. Remove pkt
+								// from
+								// all queues and reset tx vars
+								int to_remove = tx_vehicle.pktqueue.peek().id;
+								recv_time += (timestep_no - tx_vehicle.pktqueue
+										.peek().create_time);
+								recvd++;
+								num_delivered[i][j]++;
+								for (Vehicle v : vehlist) {
+									// if vehicle v is txing this pkt currently
+									// stop the tx
+									if (v.tx
+											&& v.pktqueue.peek().id == to_remove) {
+										v.tx = false;
+										RSU rx_rsu = rsulist.get(v.segment_x)
+												.get(v.segment_y);
+										rx_rsu.tx_id = -1;
+										rx_rsu.pkt_id = -1;
+										rx_rsu.idle = -1;
+										// backoff randomly for next tx
+										v.backoff = rand.nextInt(cw_max
+												- cw_min)
+												+ cw_min;
+									}
+									boolean removed = delPktID(v.pktqueue,
+											to_remove);
+									if (removed) {
+										if (trackPkt) {
+											System.out.println("pkt "
+													+ to_remove
+													+ " of vehicle " + v.id
+													+ " deleted");
+										}
 									}
 								}
+								if (trackRSU) {
+									System.out.println("RSU " + r.id
+											+ " recv pkt " + to_remove);
+								}
+								if (trackVehicle) {
+									System.out.println("Vehicle "
+											+ tx_vehicle.id + " delivered pkt "
+											+ to_remove + " to RSU " + r.id
+											+ " and backoff="
+											+ tx_vehicle.backoff);
+								}
 							}
+						} else {
+							// previous vehicle has gone away or different pkt
+							// from
+							// same car
+							r.recv_tx = tx_vehicle.pktqueue.peek().tx_time;
+							r.tx_id = r.idle;
+							r.pkt_id = tx_vehicle.pktqueue.peek().id;
 							if (trackRSU) {
-								System.out.println("RSU " + r.id + " recv pkt "
-										+ to_remove);
+								System.out.println("new pkt rx:" + r.pkt_id
+										+ " of vehicle " + r.tx_id + " by RSU "
+										+ r.id);
 							}
-							if (trackVehicle) {
-								System.out.println("Vehicle " + tx_vehicle.id
-										+ " delivered pkt " + to_remove
-										+ " to RSU " + r.id + " and backoff="
-										+ tx_vehicle.backoff);
-							}
-						}
-					} else {
-						// previous vehicle has gone away or different pkt from
-						// same car
-						r.recv_tx = tx_vehicle.pktqueue.peek().tx_time;
-						r.tx_id = r.idle;
-						r.pkt_id = tx_vehicle.pktqueue.peek().id;
-						if (trackRSU) {
-							System.out.println("new pkt rx:" + r.pkt_id
-									+ " of vehicle " + r.tx_id + " by RSU "
-									+ r.id);
 						}
 					}
 				} else {
@@ -703,10 +725,10 @@ public class Simulator {
 			}
 		}
 	}
-
 	/**
 	 * Plots the arrival distribution of vehicles.
 	 */
+	/*
 	private static void plotGraphs() {
 		// Plots vehicle arrival distribution vs time
 		int width = 640;
@@ -727,10 +749,11 @@ public class Simulator {
 			e.printStackTrace();
 		}
 	}
-
+*/
 	/**
 	 * Plots the avg segment density per km
 	 */
+	/*
 	private static void plotSegdist() {
 		// Plot no. of vehicles vs segment no.
 		int width = 640;
@@ -751,7 +774,7 @@ public class Simulator {
 			e.printStackTrace();
 		}
 	}
-
+*/
 	/**
 	 * Resets all variables after every episode
 	 */
@@ -1599,7 +1622,7 @@ public class Simulator {
 		while (!all_coverage_in_bound && U.size() != 0) {
 			ArrayList<RSU> S = new ArrayList<RSU>();
 			ArrayList<double[]> statlist = new ArrayList<double[]>();
-			//get stats for all RSUs
+			// get stats for all RSUs
 			for (int i = 0; i < U.size(); i++) {
 				RSU u = U.get(i);
 				statlist.add(getStats(u, Uprime));
@@ -1614,7 +1637,7 @@ public class Simulator {
 			}
 			ArrayList<double[]> M = new ArrayList<double[]>();
 			int currcount = 0;
-			//Generate M, the corresponding feature set for S
+			// Generate M, the corresponding feature set for S
 			for (int i = 0; i < U.size() && currcount < S.size(); i++) {
 				if (S.get(currcount).id == U.get(i).id) {
 					currcount++;
@@ -1626,9 +1649,9 @@ public class Simulator {
 					M.add(temp);
 				}
 			}
-			//obtain best RSU
+			// obtain best RSU
 			RSU s = Rainbow_product_ranking(S, M);
-			//add best RSU to Uprime, remove from U
+			// add best RSU to Uprime, remove from U
 			Uprime.add(s);
 			U.remove(s);
 		}
@@ -1677,5 +1700,108 @@ public class Simulator {
 			}
 		}
 		return s.get(best_candidate);
+	}
+
+	/**
+	 * Calculates the interference an RSU receives from every vehicle it isn't
+	 * attmepting to receive from, in a num_hops neighborhood.
+	 * 
+	 * @param r
+	 *            The receiving RSU
+	 * @return The interference, in dBm
+	 */
+	private static double calculateInterference(RSU r) {
+
+		double interference = 0, distance, signal, maxInterferer = -9999;
+
+		// Iterate through all vehicles
+		for (Vehicle v : vehlist) {
+			// Consider only those in a num_hops hop neighborhood
+			if (v.segment_x >= Math.max(0, r.segment_x - num_hops)
+					&& v.segment_x <= Math.min(
+							(road_len_x / segment_len_x) - 1, r.segment_x
+									+ num_hops)
+					&& v.segment_y >= Math.max(0, r.segment_y - num_hops)
+					&& v.segment_y <= Math.min(
+							(road_len_y / segment_len_y) - 1, r.segment_y
+									+ num_hops)) {
+				// Vehicles that aren't the target are interference
+				if (r.idle != v.id) {
+					distance = calcDistance(v.pos_x, v.pos_y,
+							(r.segment_x * segment_len_x)
+									+ (segment_len_x / 2.0),
+							(r.segment_y * segment_len_y)
+									+ (segment_len_y / 2.0));
+					double PLoss = 110 + 37 * Math.log10(distance / 1000);
+					// if(distance>10) PLoss += EXT_WALL_LOSS_DB;
+					signal = TxPower - PLoss;
+					if (signal > maxInterferer) {
+						maxInterferer = signal;
+					}
+				}
+				// Interference=max(all interference)
+				interference = maxInterferer;
+			}
+		}
+		return interference;
+	}
+
+	/**
+	 * Computes the Euclidean distance between two 2D points
+	 * 
+	 * @param x1
+	 *            x-coordinate of the first point.
+	 * @param y1
+	 *            y-coordinate of the first point.
+	 * @param x2
+	 *            x-coordinate of the second point.
+	 * @param y2
+	 *            y-coordinate of the second point.
+	 * @return The euclidean distance between the 2 points.
+	 */
+	private static double calcDistance(double x1, double y1, double x2,
+			double y2) {
+		return Math.sqrt(((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)));
+	}
+
+	/**
+	 * Computes the SINR faced by an RSU
+	 * 
+	 * @param r
+	 *            The RSU under consideration
+	 * @return The SINR value
+	 */
+	private static double calculateSINR(RSU r) {
+		double interference = calculateInterference(r);
+		double rcv_signal = recievedSignal(r);
+
+		if (interference >= NOISE_DBM) {
+			interference = 0;
+		}
+		double SINR = 2 * rcv_signal - interference - NOISE_DBM;
+		if (SINR > 40) {
+			SINR = 40;
+		}
+		if (SINR < -40) {
+			SINR = -40;
+		}
+		return Math.pow(10, SINR / 10);
+	}
+
+	/**
+	 * Computes the power of the received signal, by an RSU
+	 * 
+	 * @param r
+	 *            The RSU under consideration
+	 * @return The power of the received signal
+	 */
+	private static double recievedSignal(RSU r) {
+		Vehicle tgt = getByID(vehlist, r.idle);
+		double distance = calcDistance((r.segment_x * segment_len_x)
+				+ (segment_len_x / 2.0), (r.segment_y * segment_len_y)
+				+ (segment_len_y / 2.0), tgt.pos_x, tgt.pos_y);
+		double PLoss = 110 + 37 * Math.log10(distance / 1000);
+		double rxSignal = TxPower - PLoss;
+		return rxSignal;
 	}
 }
