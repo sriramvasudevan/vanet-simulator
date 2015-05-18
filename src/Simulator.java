@@ -4,15 +4,16 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Random;
+
 /*
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartUtilities;
-import org.jfree.chart.JFreeChart;
-import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.data.xy.XYDataset;
-import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
-*/
+ import org.jfree.chart.ChartFactory;
+ import org.jfree.chart.ChartUtilities;
+ import org.jfree.chart.JFreeChart;
+ import org.jfree.chart.plot.PlotOrientation;
+ import org.jfree.data.xy.XYDataset;
+ import org.jfree.data.xy.XYSeries;
+ import org.jfree.data.xy.XYSeriesCollection;
+ */
 /**
  * The main simulator class. Handles the entire VANET simulation.
  * 
@@ -40,11 +41,11 @@ public class Simulator {
 	/**
 	 * Length of the road in the X direction, in meters.
 	 */
-	static int road_len_x = 4000;
+	static int road_len_x = 400;
 	/**
 	 * Length of a segment in the X direction, in meters.
 	 */
-	static int segment_len_x = 1000;
+	static int segment_len_x = 100;
 	/**
 	 * Length of the road in the Y direction, in meters. Setting road_len_y =
 	 * segment_len_y ensures there is only one L-R road
@@ -66,11 +67,11 @@ public class Simulator {
 	/**
 	 * Contention window lower bound.
 	 */
-	static int cw_min = 10;
+	static int cw_min = 8;
 	/**
 	 * Contention window upper bound.
 	 */
-	static int cw_max = 11;
+	static int cw_max = 9;
 	/**
 	 * Max time to live before pkt is dropped
 	 */
@@ -438,8 +439,11 @@ public class Simulator {
 			veh_dist[i] /= no_episodes;
 		}
 		// Computing avg segment density per km (hence the segment/1000)
+		//for (int i = 0; i < seg_dist.length; i++) {
+		//	seg_dist[i] /= (no_episodes * no_timesteps * segment_len_x / 1000);
+		//}
 		for (int i = 0; i < seg_dist.length; i++) {
-			seg_dist[i] /= (no_episodes * no_timesteps * segment_len_x / 1000);
+			seg_dist[i] /= (no_episodes * no_timesteps);
 		}
 		avgpdr /= no_episodes;
 		avgrxtime /= no_episodes;
@@ -447,8 +451,8 @@ public class Simulator {
 		avgenergy /= no_episodes;
 
 		if (genGraphs) {
-		//	plotSegdist();
-		//	plotGraphs();
+			// plotSegdist();
+			// plotGraphs();
 		}
 		if (printData) {
 			System.out.println("vehdist " + episode_no);
@@ -460,6 +464,9 @@ public class Simulator {
 				System.out.println(i + "," + seg_dist[i]);
 			}
 		}
+		//for (int i = 0; i < seg_dist.length; i++) {
+		//	System.out.println(i + "," + seg_dist[i]);
+		//}
 		if (finalStats) {
 			System.out.println("Simulation completed. Avg. PDR = " + avgpdr
 					+ ", Avg. V2I pkt delay = " + avgrxtime + ", Avg. OPEX = "
@@ -726,56 +733,37 @@ public class Simulator {
 			}
 		}
 	}
+
 	/**
 	 * Plots the arrival distribution of vehicles.
 	 */
 	/*
-	private static void plotGraphs() {
-		// Plots vehicle arrival distribution vs time
-		int width = 640;
-		int height = 480;
-		XYSeries vehdist = new XYSeries("Vehicle Dist");
-		for (int j = 0; j < veh_dist.length; j++) {
-			vehdist.add(j, veh_dist[j]);
-		}
-		XYDataset dataset = new XYSeriesCollection(vehdist);
-		JFreeChart chart = ChartFactory.createXYLineChart(
-				"Vehicle Arrival Distribution", "Seconds", "No. of Vehicles",
-				dataset, PlotOrientation.VERTICAL, false, false, false);
-		File lineChart = new File("vehdist.jpeg");
-		try {
-			ChartUtilities.saveChartAsJPEG(lineChart, chart, width + 200,
-					height + 200);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-*/
+	 * private static void plotGraphs() { // Plots vehicle arrival distribution
+	 * vs time int width = 640; int height = 480; XYSeries vehdist = new
+	 * XYSeries("Vehicle Dist"); for (int j = 0; j < veh_dist.length; j++) {
+	 * vehdist.add(j, veh_dist[j]); } XYDataset dataset = new
+	 * XYSeriesCollection(vehdist); JFreeChart chart =
+	 * ChartFactory.createXYLineChart( "Vehicle Arrival Distribution",
+	 * "Seconds", "No. of Vehicles", dataset, PlotOrientation.VERTICAL, false,
+	 * false, false); File lineChart = new File("vehdist.jpeg"); try {
+	 * ChartUtilities.saveChartAsJPEG(lineChart, chart, width + 200, height +
+	 * 200); } catch (IOException e) { e.printStackTrace(); } }
+	 */
 	/**
 	 * Plots the avg segment density per km
 	 */
 	/*
-	private static void plotSegdist() {
-		// Plot no. of vehicles vs segment no.
-		int width = 640;
-		int height = 480;
-		XYSeries segdist = new XYSeries("Segment Dist");
-		for (int j = 0; j < seg_dist.length; j++) {
-			segdist.add(j, seg_dist[j]);
-		}
-		XYDataset dataset = new XYSeriesCollection(segdist);
-		JFreeChart chart = ChartFactory.createXYLineChart(
-				"Vehicle Segment Distribution", "Segment No.",
-				"No. of Vehicles", dataset, PlotOrientation.VERTICAL, false,
-				false, false);
-		File lineChart = new File("segdist.jpeg");
-		try {
-			ChartUtilities.saveChartAsJPEG(lineChart, chart, width, height);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-*/
+	 * private static void plotSegdist() { // Plot no. of vehicles vs segment
+	 * no. int width = 640; int height = 480; XYSeries segdist = new
+	 * XYSeries("Segment Dist"); for (int j = 0; j < seg_dist.length; j++) {
+	 * segdist.add(j, seg_dist[j]); } XYDataset dataset = new
+	 * XYSeriesCollection(segdist); JFreeChart chart =
+	 * ChartFactory.createXYLineChart( "Vehicle Segment Distribution",
+	 * "Segment No.", "No. of Vehicles", dataset, PlotOrientation.VERTICAL,
+	 * false, false, false); File lineChart = new File("segdist.jpeg"); try {
+	 * ChartUtilities.saveChartAsJPEG(lineChart, chart, width, height); } catch
+	 * (IOException e) { e.printStackTrace(); } }
+	 */
 	/**
 	 * Resets all variables after every episode
 	 */
@@ -976,13 +964,17 @@ public class Simulator {
 					// Put it at the border
 					if (new_seg_x >= (road_len_x / segment_len_x)) {
 						new_seg_x = (road_len_x / segment_len_x) - 1;
+						v.pos_x = road_len_x - 1;
 					} else if (new_seg_x < 0) {
 						new_seg_x = 0;
+						v.pos_x = 0;
 					}
 					if (new_seg_y >= (road_len_y / segment_len_y)) {
 						new_seg_y = (road_len_y / segment_len_y) - 1;
+						v.pos_y = road_len_y - 1;
 					} else if (new_seg_y < 0) {
 						new_seg_y = 0;
+						v.pos_y = 0;
 					}
 					// Change its direction
 					v.x_dxn *= -1;
