@@ -1,7 +1,7 @@
 ## A simple script to obtain statitics about PDR obtained when N vehicles are in the system. Set pdr_fixedcars to true in the simulator and compile .java files. To be placed in the same place as all the .class files.
 import subprocess,sys
 
-NUM = 2
+NUM = 20
 vehrange = range(1,25,1)
 SINR = sys.argv[1]
 

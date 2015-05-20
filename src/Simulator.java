@@ -5,15 +5,14 @@ import java.util.Iterator;
 import java.util.Queue;
 import java.util.Random;
 
-/*
- import org.jfree.chart.ChartFactory;
- import org.jfree.chart.ChartUtilities;
- import org.jfree.chart.JFreeChart;
- import org.jfree.chart.plot.PlotOrientation;
- import org.jfree.data.xy.XYDataset;
- import org.jfree.data.xy.XYSeries;
- import org.jfree.data.xy.XYSeriesCollection;
- */
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartUtilities;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.data.xy.XYDataset;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
+
 /**
  * The main simulator class. Handles the entire VANET simulation.
  * 
@@ -33,7 +32,7 @@ public class Simulator {
 	/**
 	 * No. of episodes
 	 */
-	static int no_episodes = 4;
+	static int no_episodes = 5;
 	/**
 	 * No. of episodes (RPR simulation)
 	 */
@@ -147,7 +146,7 @@ public class Simulator {
 	 * fixed no. of cars, and prints a single value, the average PDR. Useful to
 	 * plot number of vehicles vs PDR.
 	 */
-	static boolean pdr_fixedcars = true;
+	static boolean pdr_fixedcars = false;
 	/**
 	 * Increment the minimum PDR after each episode if true.
 	 */
@@ -171,7 +170,7 @@ public class Simulator {
 	/**
 	 * SINR Threshold value
 	 */
-	static double SINR_THRESH = 0.001;
+	static double SINR_THRESH = 0.0001;
 
 	// Exponential lambdas
 	/**
@@ -211,7 +210,7 @@ public class Simulator {
 	/**
 	 * Print a separator indicating the beginning of a new timestep, if true.
 	 */
-	static boolean printTimestep = true;
+	static boolean printTimestep = false;
 	/**
 	 * Print a separator indicating the beginning of a new episode, if true.
 	 */
@@ -439,9 +438,9 @@ public class Simulator {
 			veh_dist[i] /= no_episodes;
 		}
 		// Computing avg segment density per km (hence the segment/1000)
-		//for (int i = 0; i < seg_dist.length; i++) {
-		//	seg_dist[i] /= (no_episodes * no_timesteps * segment_len_x / 1000);
-		//}
+		// for (int i = 0; i < seg_dist.length; i++) {
+		// seg_dist[i] /= (no_episodes * no_timesteps * segment_len_x / 1000);
+		// }
 		for (int i = 0; i < seg_dist.length; i++) {
 			seg_dist[i] /= (no_episodes * no_timesteps);
 		}
@@ -451,8 +450,8 @@ public class Simulator {
 		avgenergy /= no_episodes;
 
 		if (genGraphs) {
-			// plotSegdist();
-			// plotGraphs();
+			plotSegdist();
+			plotGraphs();
 		}
 		if (printData) {
 			System.out.println("vehdist " + episode_no);
@@ -464,9 +463,9 @@ public class Simulator {
 				System.out.println(i + "," + seg_dist[i]);
 			}
 		}
-		//for (int i = 0; i < seg_dist.length; i++) {
-		//	System.out.println(i + "," + seg_dist[i]);
-		//}
+		// for (int i = 0; i < seg_dist.length; i++) {
+		// System.out.println(i + "," + seg_dist[i]);
+		// }
 		if (finalStats) {
 			System.out.println("Simulation completed. Avg. PDR = " + avgpdr
 					+ ", Avg. V2I pkt delay = " + avgrxtime + ", Avg. OPEX = "
@@ -737,33 +736,52 @@ public class Simulator {
 	/**
 	 * Plots the arrival distribution of vehicles.
 	 */
-	/*
-	 * private static void plotGraphs() { // Plots vehicle arrival distribution
-	 * vs time int width = 640; int height = 480; XYSeries vehdist = new
-	 * XYSeries("Vehicle Dist"); for (int j = 0; j < veh_dist.length; j++) {
-	 * vehdist.add(j, veh_dist[j]); } XYDataset dataset = new
-	 * XYSeriesCollection(vehdist); JFreeChart chart =
-	 * ChartFactory.createXYLineChart( "Vehicle Arrival Distribution",
-	 * "Seconds", "No. of Vehicles", dataset, PlotOrientation.VERTICAL, false,
-	 * false, false); File lineChart = new File("vehdist.jpeg"); try {
-	 * ChartUtilities.saveChartAsJPEG(lineChart, chart, width + 200, height +
-	 * 200); } catch (IOException e) { e.printStackTrace(); } }
-	 */
+
+	private static void plotGraphs() { // Plots vehicle arrival distribution vs
+										// time
+		int width = 640;
+		int height = 480;
+		XYSeries vehdist = new XYSeries("Vehicle Dist");
+		for (int j = 0; j < veh_dist.length; j++) {
+			vehdist.add(j, veh_dist[j]);
+		}
+		XYDataset dataset = new XYSeriesCollection(vehdist);
+		JFreeChart chart = ChartFactory.createXYLineChart(
+				"Vehicle Arrival Distribution", "Seconds", "No. of Vehicles",
+				dataset, PlotOrientation.VERTICAL, false, false, false);
+		File lineChart = new File("vehdist.jpeg");
+		try {
+			ChartUtilities.saveChartAsJPEG(lineChart, chart, width + 200,
+					height + 200);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 	/**
 	 * Plots the avg segment density per km
 	 */
-	/*
-	 * private static void plotSegdist() { // Plot no. of vehicles vs segment
-	 * no. int width = 640; int height = 480; XYSeries segdist = new
-	 * XYSeries("Segment Dist"); for (int j = 0; j < seg_dist.length; j++) {
-	 * segdist.add(j, seg_dist[j]); } XYDataset dataset = new
-	 * XYSeriesCollection(segdist); JFreeChart chart =
-	 * ChartFactory.createXYLineChart( "Vehicle Segment Distribution",
-	 * "Segment No.", "No. of Vehicles", dataset, PlotOrientation.VERTICAL,
-	 * false, false, false); File lineChart = new File("segdist.jpeg"); try {
-	 * ChartUtilities.saveChartAsJPEG(lineChart, chart, width, height); } catch
-	 * (IOException e) { e.printStackTrace(); } }
-	 */
+
+	private static void plotSegdist() { // Plot no. of vehicles vs segment no.
+		int width = 640;
+		int height = 480;
+		XYSeries segdist = new XYSeries("Segment Dist");
+		for (int j = 0; j < seg_dist.length; j++) {
+			segdist.add(j, seg_dist[j]);
+		}
+		XYDataset dataset = new XYSeriesCollection(segdist);
+		JFreeChart chart = ChartFactory.createXYLineChart(
+				"Vehicle Segment Distribution", "Segment No.",
+				"No. of Vehicles", dataset, PlotOrientation.VERTICAL, false,
+				false, false);
+		File lineChart = new File("segdist.jpeg");
+		try {
+			ChartUtilities.saveChartAsJPEG(lineChart, chart, width, height);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 	/**
 	 * Resets all variables after every episode
 	 */

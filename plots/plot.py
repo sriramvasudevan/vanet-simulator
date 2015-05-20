@@ -13,17 +13,20 @@ def getvals(filename):
     energy = []
     opex = []
     rsu = []
+    val = 0.01
 
-    for i in range(3,21,5):
-        pdr.append(float(a[i][a[i].index('PDR')+1]))
+    for i in range(2,len(a),4):
+        #pdr.append(float(a[i][a[i].index('PDR')+1]))
         delay.append(float(a[i][a[i].index('delay')+1]))
         opex.append(float(a[i][a[i].index('OPEX')+1]))
         energy.append(float(a[i][a[i].index('Energy')+1]))
         rsu.append(float(a[i+1][a[i+1].index('RSUs')+1]))
+        pdr.append(val)
+        val += 0.01
 
-    pdr = [0.01,0.02,0.03,0.04]
-    opex = [math.log(x) for x in opex]
-    energy = [math.log(x) for x in energy]
+    #pdr = [0.01,0.02,0.03,0.04]
+    #opex = [math.log(x) for x in opex]
+    #energy = [math.log(x) for x in energy]
     return pdr, delay, energy, opex, rsu
 
 pdrvals = []
